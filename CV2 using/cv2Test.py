@@ -13,7 +13,7 @@ while True:
 
     cv2.imshow('Sua Câmera - Entrada para IA', ia_input)
 
-    # Aperte 'q' para sair
+    # Apertar 'q' para sair
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
