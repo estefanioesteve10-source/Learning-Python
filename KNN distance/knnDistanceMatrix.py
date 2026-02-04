@@ -1,25 +1,56 @@
 import numpy as np
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score
-from keras.datasets import cifar10
+import pickle
+import os
+import tarfile
 
-# 1. Baixar o dataset (o Keras faz o download automático)
-(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+# 1. Função para extrair o arquivo baixado
+def carregar_cifar_puro(caminho_arquivo):
+    # Descompacta o .tar.gz se ainda não foi feito
+    if not os.path.exists('cifar-10-batches-py'):
+        with tarfile.open(caminho_arquivo, 'r:gz') as tar:
+            tar.extractall()
 
-# 2. Pré-processamento: Reduzir o tamanho para o kNN não demorar horas
-# Vamos usar apenas 5000 imagens de treino e 500 de teste
-x_train = x_train[:5000].reshape(5000, 3072) # 32x32x3 = 3072 pixels
-y_train = y_train[:5000].ravel()
-x_test = x_test[:500].reshape(500, 3072)
-y_test = y_test[:500].ravel()
+    # O CIFAR-10 é dividido em "batches". Vamos carregar apenas o primeiro.
+    with open('cifar-10-batches-py/data_batch_1', 'rb') as f:
+        dict_dados = pickle.load(f, encoding='bytes')
 
-# 3. Criar e treinar o modelo kNN (k=3)
-# Aqui você está aplicando a Distância L2 que o professor citou
-knn = KNeighborsClassifier(n_neighbors=3)
-knn.fit(x_train, y_train)
+    x_train = dict_dados[b'data'].astype("float32")
+    y_train = np.array(dict_dados[b'labels'])
 
-# 4. Fazer previsões
-y_pred = knn.predict(x_test)
+    # Carregar o batch de teste
+    with open('cifar-10-batches-py/test_batch', 'rb') as f:
+        dict_teste = pickle.load(f, encoding='bytes')
 
-# 5. Ver o resultado
-print(f"Acurácia do kNN: {accuracy_score(y_test, y_pred) * 100:.2f}%")
+    x_test = dict_teste[b'data'].astype("float32")
+    y_test = np.array(dict_teste[b'labels'])
+
+    return x_train, y_train, x_test, y_test
+
+# 2. Carregar os dados
+# Certifique-se de que o nome do arquivo abaixo é o mesmo que você baixou
+arquivo_baixado = 'cifar-10-python.tar.gz'
+x_train_all, y_train_all, x_test_all, y_test_all = carregar_cifar_puro(arquivo_baixado)
+
+# Reduzindo para 5000 imagens de treino e 5 de teste (para ser rápido)
+x_train = x_train_all[:5000]
+y_train = y_train_all[:5000]
+x_test = x_test_all[:5]
+y_test = y_test_all[:5]
+
+# 3. Função kNN (Distância L2) - Pura Matemática NumPy
+def predizer_knn(imagem_teste, base_treino, etiquetas_treino):
+    # Subtração -> Quadrado -> Soma -> Raiz (L2)
+    # axis=1 significa que somamos os pixels de cada imagem separadamente
+    distancias = np.sqrt(np.sum((base_treino - imagem_teste)**2, axis=1))
+
+    # Pega o índice da menor distância
+    indice_vencedor = np.argmin(distancias)
+    return etiquetas_treino[indice_vencedor]
+
+# 4. Resultados
+classes = ['aviao', 'carro', 'passaro', 'gato', 'veado', 'cao', 'sapo', 'cavalo', 'navio', 'caminhao']
+
+print("\n--- Resultados kNN (Sem bibliotecas de IA) ---")
+for i in range(5):
+    pred = predizer_knn(x_test[i], x_train, y_train)
+    print(f"Teste {i}: Previsto: {classes[pred]} | Real: {classes[y_test[i]]}")
