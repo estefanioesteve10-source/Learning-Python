@@ -14,7 +14,7 @@ def print_catalog():
     combo_1_3 = (item1 + item3) * (1 - combo_discount)
     gift_pack = (item1 + item2 + item3) * (1 - gift_discount)
 
-    # Output
+    # Outputt
     print("Online Store")
     print("--------------------")
     print("Product(S)\t\t\t\t\tPrice")
